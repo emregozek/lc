@@ -1,0 +1,11 @@
+option(ENABLE_CATCH2_TESTS "Enable catch2 tests" OFF)
+if(ENABLE_CATCH2_TESTS)
+  message("Building catch2 tests")
+  add_subdirectory(catch2)
+endif()
+
+option(ENABLE_GOOGLE_TESTS "Enable google tests" ON)
+if(ENABLE_GOOGLE_TESTS)
+  message("Building google tests")
+  add_subdirectory(gtest)
+endif()
