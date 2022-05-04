@@ -2,69 +2,117 @@
 #include<unordered_map>
 #include<vector>
 #include<stack>
+#include<algorithm>
+#include<cmath>
+#include<iterator>
+#include<chrono>
 
 namespace {
-    constexpr int decimal = 10;
 class Solution {
+    constexpr static inline int dec_max = 10;
     public:
-    static std::unordered_map<int, int> histogram_numbers_for_range(int beg, int end) {
-        std::unordered_map<int, int> histogram;
+    static std::vector<int> digit_hist_in_range(int beg, int end) {
+        std::vector<int> histogram(dec_max);
         if (beg >= end) {
             return histogram;
         }
-        // 0 1 2 3 4 5 6 7 8 9
-        // [0 - 10) => 1 (10x + 10/10)
-        // [0 - 100) ==> 20 (10x + 100/10)
-        // [0 - 1000) ==> 300 (10x + 1000/10)
-        // [0 - 10000) ==> 4000
+        if (beg < 0) {
+            std::cout << "negative numbers not supported\n";
+            return histogram;
+        }
+
         std::vector<int> digit_count_vec;
-        int digit_count_iter = 0;
-        int find_max = 1;
+        long int find_max = 1;
         digit_count_vec.push_back(1);
-        while (find_max <= end) {
-            digit_count_vec.push_back((digit_count_vec.back() * 10) + (find_max / 10));
-            find_max *= 10;
+        auto diff_it {end - beg};
+        int n_digits_diff = 1;
+        while (diff_it >= dec_max) {
+            ++n_digits_diff;
+            diff_it /= dec_max;
+            find_max *= dec_max;
+            digit_count_vec.push_back((digit_count_vec.back() * dec_max) + static_cast<int>(find_max));
         }
 
-        auto diff {end - beg};// 3526 7
-        auto diff_iter {diff};
-        int n_digits = 1;
-        while (diff_iter >= 10) {
-            ++n_digits;
-            diff_iter /= 10;
-        }
+        auto remaining_diff {end - beg};
+        auto cur_end {end};
+        for (int i = n_digits_diff; i > 0; --i) {
+            auto diff_step = static_cast<int>(std::pow(dec_max, i - 1));
+            int diff_step_cnt = remaining_diff / diff_step;
+            if (!diff_step_cnt) {
+                continue;
+            }
+            int cur_end_mod = cur_end % diff_step;
+            int cur_process = diff_step * diff_step_cnt;
 
-        if (diff < decimal) {
-            std::stack<int> digits;
-            auto iter_beg {beg};
-            while (iter_beg >= 1) {
-                digits.push(iter_beg % decimal);
-                iter_beg /= decimal;
+            auto higher_digits_min = (cur_end - cur_end_mod - cur_process) / diff_step;
+
+            if (i > 1) {
+                auto to_be_added = diff_step_cnt * digit_count_vec[static_cast<std::size_t>(i - 2)];
+                std::for_each(histogram.begin(), histogram.end(), [to_be_added](auto &el) { el += to_be_added;});
             }
-            while (digits.size() > 1) {
-                histogram[digits.top()] += diff;
-                digits.pop();
+
+            int processing_phase{};
+            while (diff_step_cnt >= 0) {
+                auto higher_digits_iter {higher_digits_min + diff_step_cnt};
+                auto incr_val = processing_phase == 0 ? cur_end_mod : processing_phase == 1 ? diff_step : (diff_step - cur_end_mod);
+                while (higher_digits_iter >= 1) {
+                    auto idx = static_cast<std::size_t>(higher_digits_iter % 10);
+                    histogram[idx] += incr_val;
+                    higher_digits_iter /= 10;     
+                }
+                --diff_step_cnt;
+                if (processing_phase == 0) {
+                    ++processing_phase;
+                } else if (processing_phase == 1 && diff_step_cnt == 0) {
+                    ++processing_phase;
+                }
             }
-            for (int i = digits.top(); i < diff; ++i) {
-                histogram[i] += 1;
+            remaining_diff -= cur_process;
+            cur_end -= cur_process;
+        }
+        return histogram;
+    }
+
+    static std::vector<int> digit_hist_in_range_brute_force(int beg, int end) {
+        std::vector<int> histogram(10);
+        if (beg >= end) {
+            return histogram;
+        }
+        if (beg < 0) {
+            std::cout << "negative numbers not supported\n";
+            return histogram;
+        }
+        for (auto i = beg; i < end; ++i) {
+            auto iter {i};
+            while (iter >= dec_max) {
+                histogram[static_cast<std::size_t>(iter % dec_max)] += 1;
+                iter /= dec_max;
             }
+            histogram[static_cast<std::size_t>(iter % dec_max)] += 1;
         }
         return histogram;
     }
 };
 }
-// 12 18
-// 12 13 14 15 16 17
-// 1 ==> 
-// 312 318
-// 
+
 
 int main() {
-    Solution s;
-    int beg {112};
-    int end {1288};
-    auto result_map {s.histogram_numbers_for_range(beg, end)};
-    for (const auto& val : result_map) {
-        std::cout << "[" << val.first << "]" << " = " << val.second << "\n";
-    }
+
+    int beg {120};
+    int end {96665633};
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+    auto result {Solution::digit_hist_in_range(beg, end)};
+    auto t2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = t2 - t1;
+    std::cout << "\n\n" << ms_double.count() << " milliseconds spent on the optimized solution\n\nOPT\n";
+    std::copy(result.cbegin(), result.cend(), std::ostream_iterator<int>{std::cout, "\n"});
+
+    t1 = std::chrono::high_resolution_clock::now();
+    auto result_brute_force {Solution::digit_hist_in_range_brute_force(beg, end)};
+    t2 = std::chrono::high_resolution_clock::now();
+    ms_double = t2 - t1;
+    std::cout << "\n\n"  << ms_double.count() << " milliseconds spent on the brute force solution\n\nBRUTEFORCE\n";
+
+    std::copy(result_brute_force.cbegin(), result_brute_force.cend(), std::ostream_iterator<int>{std::cout, "\n"});
 }
