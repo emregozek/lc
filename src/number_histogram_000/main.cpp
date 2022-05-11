@@ -8,10 +8,21 @@
 #include<chrono>
 
 namespace {
+
+class Profiling {
+    private:
+        std::chrono::system_clock::time_point m_start;
+    public:
+        Profiling() : m_start{std::chrono::high_resolution_clock::now()} {}
+        ~Profiling() {
+            std::cout << "Took " << std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - m_start).count() << " ms\n";
+        }
+};
 class Solution {
     constexpr static inline int dec_max = 10;
     public:
     static std::vector<int> digit_hist_in_range(int beg, int end) {
+        Profiling p{};
         std::vector<int> histogram(dec_max);
         if (beg >= end) {
             return histogram;
@@ -74,6 +85,7 @@ class Solution {
     }
 
     static std::vector<int> digit_hist_in_range_brute_force(int beg, int end) {
+        Profiling p{};
         std::vector<int> histogram(10);
         if (beg >= end) {
             return histogram;
@@ -101,18 +113,9 @@ int main() {
     int beg {120};
     int end {96665633};
 
-    auto t1 = std::chrono::high_resolution_clock::now();
     auto result {Solution::digit_hist_in_range(beg, end)};
-    auto t2 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> ms_double = t2 - t1;
-    std::cout << "\n\n" << ms_double.count() << " milliseconds spent on the optimized solution\n\nOPT\n";
     std::copy(result.cbegin(), result.cend(), std::ostream_iterator<int>{std::cout, "\n"});
 
-    t1 = std::chrono::high_resolution_clock::now();
     auto result_brute_force {Solution::digit_hist_in_range_brute_force(beg, end)};
-    t2 = std::chrono::high_resolution_clock::now();
-    ms_double = t2 - t1;
-    std::cout << "\n\n"  << ms_double.count() << " milliseconds spent on the brute force solution\n\nBRUTEFORCE\n";
-
     std::copy(result_brute_force.cbegin(), result_brute_force.cend(), std::ostream_iterator<int>{std::cout, "\n"});
 }
